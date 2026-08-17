@@ -98,6 +98,9 @@ function getMockResponse(body: CopilotRequestBody): GeminiAnalysisResult {
   return DEFAULT_MOCK;
 }
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 // ── Main POST handler ─────────────────────────────────────────────────────
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let body: CopilotRequestBody;
@@ -114,11 +117,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   // ── Fast fallback: no API key configured ─────────────────────────────────
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your-gemini-api-key-here') {
+  if (!apiKey || apiKey.trim() === '' || apiKey === 'your-gemini-api-key-here' || apiKey === 'your_gemini_api_key_here') {
     console.info('[FleetPulse] GEMINI_API_KEY not set — using pre-calculated mock response');
     return NextResponse.json(getMockResponse(body), {
       status: 200,
-      headers: { 'X-FleetPulse-Source': 'mock' },
+      headers: {
+        'X-FleetPulse-Source': 'mock',
+        'X-FleetPulse-Reason': 'api-key-missing-in-env',
+      },
     });
   }
 
@@ -133,8 +139,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         systemInstruction: buildSystemPrompt(),
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.3,   // deterministic for logistics analysis
-        maxOutputTokens: 4000,
+        temperature: 0.2,
+        maxOutputTokens: 2500,
       },
     });
 
@@ -160,7 +166,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(parsed, {
       status: 200,
-      headers: { 'X-FleetPulse-Source': 'gemini-3.6-flash' },
+      headers: {
+        'X-FleetPulse-Source': 'gemini-3.6-flash',
+      },
     });
 
   } catch (err: unknown) {
@@ -177,6 +185,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       headers: {
         'X-FleetPulse-Source': 'mock-fallback',
         'X-FleetPulse-Error': isRateLimit ? 'rate-limited' : 'api-error',
+        'X-FleetPulse-Message': encodeURIComponent(message.slice(0, 120)),
       },
     });
   }
