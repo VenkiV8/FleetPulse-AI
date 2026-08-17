@@ -163,6 +163,8 @@ interface AICopilotProps {
   scenarioId: string;
   disruption: string;
   onApproveOverride?: (option: GeminiMitigationOption) => void;
+  hoveredStrategyId?: 'OPT-1' | 'OPT-2' | null;
+  onHoverStrategy?: (id: 'OPT-1' | 'OPT-2' | null) => void;
 }
 
 export default function AICopilot({
@@ -173,6 +175,8 @@ export default function AICopilot({
   scenarioId,
   disruption,
   onApproveOverride,
+  hoveredStrategyId = null,
+  onHoverStrategy,
 }: AICopilotProps) {
   const [actions, setActions] = useState<AIAction[]>(analysis.actions);
   const [riskItems] = useState<AIRiskItem[]>(analysis.riskItems);
@@ -233,6 +237,8 @@ export default function AICopilot({
           disruption={disruption}
           isResolved={isResolved}
           onApproveOverride={onApproveOverride}
+          hoveredStrategyId={hoveredStrategyId}
+          onHoverStrategy={onHoverStrategy}
         />
 
         <SectionDivider label="Static Risk Intelligence" />

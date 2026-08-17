@@ -8,6 +8,7 @@ interface HeaderProps {
   scenarios: Scenario[];
   activeScenarioId: string;
   onScenarioChange: (id: string) => void;
+  showDropdownPulse?: boolean;
 }
 
 function LiveClock() {
@@ -50,7 +51,7 @@ function LiveClock() {
   );
 }
 
-export default function Header({ scenarios, activeScenarioId, onScenarioChange }: HeaderProps) {
+export default function Header({ scenarios, activeScenarioId, onScenarioChange, showDropdownPulse = false }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -98,10 +99,14 @@ export default function Header({ scenarios, activeScenarioId, onScenarioChange }
             <button
               id="simulate-disruption-btn"
               onClick={() => setIsOpen(!isOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
                          bg-amber-500/10 border border-amber-500/30 text-amber-400
                          hover:bg-amber-500/20 hover:border-amber-500/50
-                         transition-all duration-200 whitespace-nowrap"
+                         transition-all duration-200 whitespace-nowrap
+                         ${showDropdownPulse
+                           ? 'animate-pulse ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950'
+                           : ''
+                         }`}
               aria-haspopup="listbox"
               aria-expanded={isOpen}
             >

@@ -20,9 +20,17 @@ interface MapPanelProps {
   consignment: Consignment;
   isResolved: boolean;
   onToggleResolution: () => void;
+  hoveredStrategyId?: 'OPT-1' | 'OPT-2' | null;
+  onHoverStrategy?: (id: 'OPT-1' | 'OPT-2' | null) => void;
 }
 
-export default function MapPanel({ consignment, isResolved, onToggleResolution }: MapPanelProps) {
+export default function MapPanel({
+  consignment,
+  isResolved,
+  onToggleResolution,
+  hoveredStrategyId = null,
+  onHoverStrategy,
+}: MapPanelProps) {
   const isCriticalOrMonitoring =
     consignment.status === 'CRITICAL' || consignment.status === 'MONITORING';
 
@@ -39,8 +47,45 @@ export default function MapPanel({ consignment, isResolved, onToggleResolution }
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Dynamic Strategy Hover Chips for quick preview on map */}
+          {!isResolved && isCriticalOrMonitoring && (
+            <div className="flex items-center gap-1.5 bg-slate-950/60 p-1 rounded-lg border border-slate-800/80">
+              <button
+                type="button"
+                onMouseEnter={() => onHoverStrategy?.('OPT-1')}
+                onMouseLeave={() => onHoverStrategy?.(null)}
+                onClick={() => onHoverStrategy?.(hoveredStrategyId === 'OPT-1' ? null : 'OPT-1')}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all duration-150 flex items-center gap-1 ${
+                  hoveredStrategyId === 'OPT-1'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                    : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/70'
+                }`}
+                title="Hover or click to preview Strategy 1: SH-17 Bypass Detour"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${hoveredStrategyId === 'OPT-1' ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500/60'}`} />
+                OPT-1: Bypass
+              </button>
+
+              <button
+                type="button"
+                onMouseEnter={() => onHoverStrategy?.('OPT-2')}
+                onMouseLeave={() => onHoverStrategy?.(null)}
+                onClick={() => onHoverStrategy?.(hoveredStrategyId === 'OPT-2' ? null : 'OPT-2')}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all duration-150 flex items-center gap-1 ${
+                  hoveredStrategyId === 'OPT-2'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                    : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/70'
+                }`}
+                title="Hover or click to preview Strategy 2: Surat Hub Relay"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${hoveredStrategyId === 'OPT-2' ? 'bg-amber-400 animate-pulse' : 'bg-amber-500/60'}`} />
+                OPT-2: Surat Hub
+              </button>
+            </div>
+          )}
+
           {/* Route Legend */}
-          <div className="hidden sm:flex items-center gap-3 text-[10px] text-slate-500">
+          <div className="hidden xl:flex items-center gap-3 text-[10px] text-slate-500">
             <span className="flex items-center gap-1">
               <span className="w-3 h-0.5 bg-slate-600 rounded" />
               Travelled
@@ -53,8 +98,8 @@ export default function MapPanel({ consignment, isResolved, onToggleResolution }
                 </span>
                 {isCriticalOrMonitoring && (
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-red-400 opacity-80" />
-                    Hazard Zone
+                    <span className="w-2 h-2 rounded-full bg-red-400 opacity-80 animate-pulse" />
+                    Hazard
                   </span>
                 )}
               </>
@@ -121,10 +166,14 @@ export default function MapPanel({ consignment, isResolved, onToggleResolution }
         </div>
       )}
 
-      {/* ── Map Container ── */}
+      {/* ── Map Container Wrapped in Styled Card ── */}
       <div className="flex-1 min-h-0 p-3">
-        <div className="w-full h-72 lg:h-full min-h-[280px] rounded-xl overflow-hidden border border-slate-800/70">
-          <LeafletMap consignment={consignment} isResolved={isResolved} />
+        <div className="w-full h-72 lg:h-full min-h-[280px] bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden relative">
+          <LeafletMap
+            consignment={consignment}
+            isResolved={isResolved}
+            hoveredStrategyId={hoveredStrategyId}
+          />
         </div>
       </div>
 

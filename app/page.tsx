@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { ChevronRight, X, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import KPIBar from '@/components/KPIBar';
 import ConsignmentQueue from '@/components/ConsignmentQueue';
@@ -13,9 +14,19 @@ import { scenarios, aiAnalysisMap, kpiData, defaultScenarioId } from '@/lib/mock
 // How long the AI "analyzing" loading state shows for (ms)
 const ANALYZING_DURATION_MS = 2400;
 
+// ── Evaluator Quick-Start Tour Steps ──────────────────────────────────────
+const TOUR_STEPS = [
+  { num: 1, label: 'Select Disruption Scenario', desc: 'Trigger a real-world B2B corridor hazard' },
+  { num: 2, label: 'Review AI Trade-Off Matrix', desc: 'Compare cost vs. SLA penalty avoidance' },
+  { num: 3, label: 'Authorize Dispatch Override', desc: 'Execute human-in-the-loop decision' },
+] as const;
+
 export default function DashboardPage() {
   const [activeScenarioId, setActiveScenarioId] = useState(defaultScenarioId);
   const [selectedConsignmentId, setSelectedConsignmentId] = useState<string>('');
+
+  // Track active/hovered strategy for map preview ('OPT-1' | 'OPT-2' | null)
+  const [hoveredStrategyId, setHoveredStrategyId] = useState<'OPT-1' | 'OPT-2' | null>(null);
 
   // Per-consignment resolution/mitigation state: id → boolean
   const [resolvedMap, setResolvedMap] = useState<Record<string, boolean>>({});
@@ -29,6 +40,24 @@ export default function DashboardPage() {
   // AI copilot loading state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const analyzingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Cold-start evaluator banner state ──────────────────────────────────
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [hasInteractedWithScenario, setHasInteractedWithScenario] = useState(false);
+
+  // Hydrate dismiss state from localStorage (client-only)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('fp-evaluator-banner-dismissed') === '1') {
+        setIsBannerDismissed(true);
+      }
+    } catch { /* SSR or private-mode */ }
+  }, []);
+
+  const handleDismissBanner = useCallback(() => {
+    setIsBannerDismissed(true);
+    try { localStorage.setItem('fp-evaluator-banner-dismissed', '1'); } catch { /* noop */ }
+  }, []);
 
   // ── Derived active scenario ──────────────────────────────────────────────
   const activeScenario = useMemo(
@@ -67,6 +96,8 @@ export default function DashboardPage() {
     setIsAnalyzing(true);
     setActiveScenarioId(id);
     setSelectedConsignmentId(''); // reset → auto-selects CRITICAL
+    setHoveredStrategyId(null);
+    setHasInteractedWithScenario(true); // Stop dropdown pulse animation
 
     // Clear resolved state for old scenario consignments
     setResolvedMap({});
@@ -82,6 +113,7 @@ export default function DashboardPage() {
     if (analyzingTimer.current) clearTimeout(analyzingTimer.current);
     setIsAnalyzing(true);
     setSelectedConsignmentId(id);
+    setHoveredStrategyId(null);
     analyzingTimer.current = setTimeout(() => setIsAnalyzing(false), 1200);
   }, [resolvedSelectedId]);
 
@@ -104,6 +136,7 @@ export default function DashboardPage() {
 
     // 1. Update consignment status to MITIGATED / resolved (updates badge & triggers green bypass on Leaflet map)
     setResolvedMap((prev) => ({ ...prev, [selectedConsignment.id]: true }));
+    setHoveredStrategyId(null);
 
     // 2. Increment Avoided Penalties KPI dynamically
     setExtraSavingsInr((prev) => prev + savings);
@@ -132,6 +165,7 @@ export default function DashboardPage() {
         scenarios={scenarios}
         activeScenarioId={activeScenarioId}
         onScenarioChange={handleScenarioChange}
+        showDropdownPulse={!hasInteractedWithScenario}
       />
 
       {/* ── Executive KPI Bar with dynamic savings accumulator ── */}
@@ -139,6 +173,56 @@ export default function DashboardPage() {
         data={kpiData}
         extraSavingsInr={extraSavingsInr}
       />
+
+      {/* ── Evaluator Quick-Start Tour Banner ── */}
+      {!isBannerDismissed && (
+        <div className="mx-4 lg:mx-6 mb-1 mt-1">
+          <div className="relative bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3 flex items-center gap-4 overflow-hidden">
+            {/* Subtle gradient shimmer background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/5 via-transparent to-indigo-600/5 pointer-events-none" />
+
+            {/* Title badge */}
+            <div className="relative flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/15 border border-indigo-500/25">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-[10px] font-bold tracking-widest uppercase text-indigo-300">
+                  Evaluator Quick-Start Tour
+                </span>
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div className="relative flex items-center gap-1.5 flex-1 min-w-0">
+              {TOUR_STEPS.map((step, i) => (
+                <div key={step.num} className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/40 shrink-0">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-bold text-indigo-300">
+                      {step.num}
+                    </span>
+                    <div className="flex flex-col leading-none">
+                      <span className="text-xs font-medium text-slate-200 whitespace-nowrap">{step.label}</span>
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap hidden xl:block">{step.desc}</span>
+                    </div>
+                  </div>
+                  {i < TOUR_STEPS.length - 1 && (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Close button */}
+            <button
+              id="dismiss-evaluator-banner"
+              onClick={handleDismissBanner}
+              className="relative z-10 p-1 rounded-md text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors duration-150 shrink-0"
+              aria-label="Dismiss evaluator tour banner"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Main Content ── */}
       <main className="flex-1 overflow-hidden">
@@ -161,6 +245,8 @@ export default function DashboardPage() {
                 consignment={selectedConsignment}
                 isResolved={isCurrentResolved}
                 onToggleResolution={() => handleToggleResolution(resolvedSelectedId)}
+                hoveredStrategyId={hoveredStrategyId}
+                onHoverStrategy={setHoveredStrategyId}
               />
             )}
           </div>
@@ -177,6 +263,8 @@ export default function DashboardPage() {
                 scenarioId={activeScenarioId}
                 disruption={activeScenario.disruption}
                 onApproveOverride={handleApproveDispatchOverride}
+                hoveredStrategyId={hoveredStrategyId}
+                onHoverStrategy={setHoveredStrategyId}
               />
             )}
           </div>
