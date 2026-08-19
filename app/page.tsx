@@ -8,6 +8,7 @@ import ConsignmentQueue from '@/components/ConsignmentQueue';
 import MapPanel from '@/components/MapPanel';
 import AICopilot from '@/components/AICopilot';
 import ActionToast, { type ToastPayload } from '@/components/ActionToast';
+import WelcomeModal from '@/components/WelcomeModal';
 import type { GeminiMitigationOption } from '@/lib/geminiTypes';
 import { scenarios, aiAnalysisMap, kpiData, defaultScenarioId } from '@/lib/mockData';
 
@@ -22,6 +23,9 @@ const TOUR_STEPS = [
 ] as const;
 
 export default function DashboardPage() {
+  // Welcome modal — open by default on first visit
+  const [isModalOpen, setIsModalOpen] = useState(true);
+
   const [activeScenarioId, setActiveScenarioId] = useState(defaultScenarioId);
   const [selectedConsignmentId, setSelectedConsignmentId] = useState<string>('');
 
@@ -166,6 +170,7 @@ export default function DashboardPage() {
         activeScenarioId={activeScenarioId}
         onScenarioChange={handleScenarioChange}
         showDropdownPulse={!hasInteractedWithScenario}
+        onOpenGuide={() => setIsModalOpen(true)}
       />
 
       {/* ── Executive KPI Bar with dynamic savings accumulator ── */}
@@ -276,6 +281,9 @@ export default function DashboardPage() {
         toast={activeToast}
         onDismiss={() => setActiveToast(null)}
       />
+
+      {/* ── Welcome / Onboarding Modal ── */}
+      <WelcomeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }

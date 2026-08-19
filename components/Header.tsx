@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Cpu, ChevronDown, Zap, AlertTriangle } from 'lucide-react';
+import { Cpu, ChevronDown, Zap, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { Scenario } from '@/lib/types';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   activeScenarioId: string;
   onScenarioChange: (id: string) => void;
   showDropdownPulse?: boolean;
+  onOpenGuide?: () => void;
 }
 
 function LiveClock() {
@@ -51,7 +52,7 @@ function LiveClock() {
   );
 }
 
-export default function Header({ scenarios, activeScenarioId, onScenarioChange, showDropdownPulse = false }: HeaderProps) {
+export default function Header({ scenarios, activeScenarioId, onScenarioChange, showDropdownPulse = false, onOpenGuide }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -158,6 +159,22 @@ export default function Header({ scenarios, activeScenarioId, onScenarioChange, 
               </div>
             )}
           </div>
+
+          {/* Guide Button */}
+          {onOpenGuide && (
+            <button
+              id="reopen-guide-btn"
+              onClick={onOpenGuide}
+              title="Re-open evaluator guide"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                         bg-slate-800/80 border border-slate-700/60 text-slate-400
+                         hover:text-slate-200 hover:bg-slate-700/80 hover:border-slate-600
+                         transition-all duration-150"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:block">Guide</span>
+            </button>
+          )}
 
           {/* Live Clock */}
           <LiveClock />
