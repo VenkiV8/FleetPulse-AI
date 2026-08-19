@@ -435,7 +435,7 @@ function AIReasoningDrawer() {
               <span className="text-[9px] font-bold text-violet-300 uppercase tracking-widest">Engine</span>
             </div>
             {([
-              { label: 'Model',             value: 'Gemini 2.0 Flash' },
+              { label: 'Model',             value: 'Gemini 2.5 Flash' },
               { label: 'Temperature',       value: '0.2' },
               { label: 'Latency',           value: '840 ms' },
               { label: 'Risk Confidence',   value: '92%' },

@@ -76,8 +76,8 @@ const RESPONSE_SCHEMA = {
   required: ['risk_assessment', 'mitigation_options', 'driver_dispatch_memo', 'customer_status_advisory'],
 };
 
-// ── Model name — high-RPM flash tier, NOT pro ─────────────────────────────
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// ── Model name — latest generation high-speed reasoning Flash model ──────
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────
 function buildSystemPrompt(): string {
