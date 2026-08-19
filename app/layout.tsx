@@ -1,13 +1,24 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { League_Spartan, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+// Major headings — bold geometric sans, premium control-tower feel
+const leagueSpartan = League_Spartan({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-heading',
+  weight: ['500', '600', '700', '800'],
   display: 'swap',
 });
 
+// Body / UI text — clean modern humanist, excellent legibility at small sizes
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  weight: ['300', '400', '500', '600'],
+  display: 'swap',
+});
+
+// Monospace — telemetry values, IDs, code
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
@@ -30,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${leagueSpartan.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-slate-950 text-slate-100 antialiased min-h-screen">
         {children}
       </body>
