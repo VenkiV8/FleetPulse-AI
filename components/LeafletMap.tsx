@@ -313,6 +313,7 @@ export default function LeafletMap({
   const destIcon = useMemo(() => createEndpointIcon('destination'), []);
 
   return (
+    <div style={{ isolation: 'isolate' }} className="w-full h-full">
     <MapContainer
       center={initialCenter}
       zoom={zoom}
@@ -544,5 +545,6 @@ export default function LeafletMap({
         </Tooltip>
       </Marker>
     </MapContainer>
+    </div>
   );
 }
