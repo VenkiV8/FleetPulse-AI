@@ -722,6 +722,7 @@ export default function GeminiAnalysis({
   const [error, setError] = useState(false);
   const [source, setSource] = useState<string | null>(null);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
 
   const fetchAnalysis = useCallback(async () => {
     setLoading(true);
@@ -757,8 +758,16 @@ export default function GeminiAnalysis({
 
       const srcHeader = res.headers.get('X-FleetPulse-Source') ?? 'mock';
       const errHeader = res.headers.get('X-FleetPulse-Error');
+      const rawMsg = res.headers.get('X-FleetPulse-Message');
+      const msgHeader = rawMsg ? decodeURIComponent(rawMsg) : null;
+
       setSource(srcHeader);
       setFallbackReason(errHeader);
+      setFallbackMessage(msgHeader);
+
+      if (errHeader || msgHeader) {
+        console.warn(`[FleetPulse] Source: ${srcHeader}, Reason: ${errHeader}, Details: ${msgHeader}`);
+      }
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -789,8 +798,8 @@ export default function GeminiAnalysis({
         </h3>
         {source && (
           <span
-            title={fallbackReason === 'rate-limited' ? 'Google AI Studio API quota exceeded — running on pre-calculated resilience model' : undefined}
-            className={`inline-flex items-center gap-1.5 text-[9px] px-2 py-0.5 rounded-md border font-mono font-semibold
+            title={fallbackMessage ?? (fallbackReason === 'rate-limited' ? 'Google AI Studio API quota exceeded — running on resilience fallback' : undefined)}
+            className={`inline-flex items-center gap-1.5 text-[9px] px-2 py-0.5 rounded-md border font-mono font-semibold cursor-help
             ${source.startsWith('gemini')
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
               : source === 'mock-fallback'
@@ -814,6 +823,7 @@ export default function GeminiAnalysis({
           </span>
         )}
       </div>
+
 
       {/* ── Loading ── */}
       {loading && (

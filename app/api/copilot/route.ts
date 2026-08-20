@@ -4,15 +4,16 @@ import type { CopilotRequestBody, GeminiAnalysisResult } from '@/lib/geminiTypes
 import { MOCK_RESPONSES, DEFAULT_MOCK } from '@/lib/geminiMocks';
 
 // ── Server-Side In-Memory Cache ───────────────────────────────────────────
-// Keyed by `${scenarioId}:${consignmentId}` for precise per-scenario caching.
-// Lives for the lifetime of the Node.js process (cleared on cold start).
+// Keyed by `${scenarioId}:${consignmentId}` for fast repeated views.
+// Note: We ONLY cache successful live inferences (never cache errors or mocks)
+// so that newly added API keys or resolved rate limits reflect immediately.
 
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 interface CacheEntry {
   result: GeminiAnalysisResult;
   storedAt: number;          // epoch ms
-  source: string;            // which model or fallback
+  source: string;            // which model
 }
 
 // Module-level Map — persists across requests within the same server instance
@@ -76,8 +77,11 @@ const RESPONSE_SCHEMA = {
   required: ['risk_assessment', 'mitigation_options', 'driver_dispatch_memo', 'customer_status_advisory'],
 };
 
-// ── Model name — latest generation high-speed reasoning Flash model ──────
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// ── Active Gemini Production Models ───────────────────────────────────────
+// 'gemini-2.0-flash' is the primary fast production model.
+// 'gemini-1.5-flash' is the secondary fallback if the 2.0 endpoint is unavailable.
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const FALLBACK_MODEL = 'gemini-1.5-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────
 function buildSystemPrompt(): string {
@@ -130,16 +134,16 @@ function getMockResponse(body: CopilotRequestBody): GeminiAnalysisResult {
   return DEFAULT_MOCK;
 }
 
-// ── Single Gemini call with optional 429 retry ────────────────────────────
-async function callGemini(
+// ── Single Gemini call with specified model ───────────────────────────────
+async function callGeminiModel(
   ai: GoogleGenAI,
-  body: CopilotRequestBody,
-  attempt: number = 1
-): Promise<{ result: GeminiAnalysisResult; latencyMs: number }> {
+  modelName: string,
+  body: CopilotRequestBody
+): Promise<{ result: GeminiAnalysisResult; latencyMs: number; modelUsed: string }> {
   const start = Date.now();
 
   const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
+    model: modelName,
     contents: buildUserPrompt(body),
     config: {
       systemInstruction: buildSystemPrompt(),
@@ -151,7 +155,7 @@ async function callGemini(
   });
 
   const rawText = response.text;
-  if (!rawText) throw new Error('Gemini returned empty response');
+  if (!rawText) throw new Error('Gemini returned empty response text');
 
   const parsed: GeminiAnalysisResult = JSON.parse(rawText);
 
@@ -165,7 +169,7 @@ async function callGemini(
     throw new Error('Gemini returned fewer than 2 mitigation options');
   }
 
-  return { result: parsed, latencyMs: Date.now() - start };
+  return { result: parsed, latencyMs: Date.now() - start, modelUsed: modelName };
 }
 
 // ── Sleep helper ──────────────────────────────────────────────────────────
@@ -187,12 +191,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const key = cacheKey(body);
 
-  // ── 1. Cache HIT ─────────────────────────────────────────────────────────
+  // ── 1. Cache HIT (Only hits if previously succeeded with Live Gemini) ──────
   const cached = getCached(key);
   if (cached) {
-    console.info(`[FleetPulse] Cache HIT for ${key} (source: ${cached.source})`);
+    console.info(`[FleetPulse] Cache HIT for ${key} (model: ${cached.source})`);
     return NextResponse.json(
-      { ...cached.result, isLiveInference: cached.source.startsWith('gemini'), cached: true },
+      { ...cached.result, isLiveInference: true, cached: true },
       {
         status: 200,
         headers: {
@@ -204,92 +208,111 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // ── 2. No API key → immediate mock ───────────────────────────────────────
-  const apiKey = process.env.GEMINI_API_KEY;
+  // ── 2. Check API key presence ─────────────────────────────────────────────
+  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
   const isMissingKey =
     !apiKey ||
-    apiKey.trim() === '' ||
     apiKey === 'your-gemini-api-key-here' ||
     apiKey === 'your_gemini_api_key_here';
 
   if (isMissingKey) {
-    console.info('[FleetPulse] GEMINI_API_KEY not set — using pre-calculated mock');
+    console.info('[FleetPulse] GEMINI_API_KEY environment variable is not configured.');
     const mock = getMockResponse(body);
-    setCached(key, mock, 'mock');
     return NextResponse.json(
       { ...mock, isLiveInference: false, cached: false },
       {
         status: 200,
         headers: {
           'X-FleetPulse-Source': 'mock',
-          'X-FleetPulse-Reason': 'api-key-missing',
+          'X-FleetPulse-Error': 'api-key-missing',
+          'X-FleetPulse-Message': encodeURIComponent('GEMINI_API_KEY environment variable is missing or empty in Vercel settings.'),
           'X-Cache': 'MISS',
         },
       }
     );
   }
 
-  // ── 3. Live Gemini call (with one 429 retry) ──────────────────────────────
+  // ── 3. Live Gemini Call with Multi-Model & Retry Resilience ───────────────
   const ai = new GoogleGenAI({ apiKey });
 
-  const tryGemini = async (attempt: number) => {
+  let lastError: string = '';
+  let isRateLimit = false;
+
+  // Try Primary Model first (e.g. gemini-2.0-flash)
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return await callGemini(ai, body, attempt);
+      const { result, latencyMs, modelUsed } = await callGeminiModel(ai, PRIMARY_MODEL, body);
+      setCached(key, result, modelUsed);
+
+      console.info(`[FleetPulse] Live Gemini success with ${modelUsed} in ${latencyMs}ms`);
+
+      return NextResponse.json(
+        { ...result, isLiveInference: true, cached: false },
+        {
+          status: 200,
+          headers: {
+            'X-FleetPulse-Source': modelUsed,
+            'X-Cache': 'MISS',
+            'X-Inference-Latency-Ms': String(latencyMs),
+          },
+        }
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      const is429 = msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate');
+      lastError = msg;
+      isRateLimit = msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate');
 
-      if (is429 && attempt === 1) {
-        // Single retry after 1.5s back-off
-        console.warn(`[FleetPulse] Gemini 429 on attempt 1 — waiting 1.5s then retrying`);
+      console.warn(`[FleetPulse] Primary model (${PRIMARY_MODEL}) attempt ${attempt} failed: ${msg}`);
+
+      if (isRateLimit && attempt === 1) {
+        // Wait 1.5s backoff before retrying attempt 2
         await sleep(1500);
-        return tryGemini(2);
+        continue;
       }
-
-      // Re-throw for outer catch to handle as mock fallback
-      throw Object.assign(err instanceof Error ? err : new Error(msg), { is429, attempt });
+      break; // Exit to fallback model
     }
-  };
-
-  try {
-    const { result, latencyMs } = await tryGemini(1);
-    setCached(key, result, GEMINI_MODEL);
-
-    console.info(`[FleetPulse] Gemini success for ${key} in ${latencyMs}ms`);
-
-    return NextResponse.json(
-      { ...result, isLiveInference: true, cached: false },
-      {
-        status: 200,
-        headers: {
-          'X-FleetPulse-Source': GEMINI_MODEL,
-          'X-Cache': 'MISS',
-          'X-Inference-Latency-Ms': String(latencyMs),
-        },
-      }
-    );
-
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    const isRateLimit = message.includes('429') || message.toLowerCase().includes('quota') || message.toLowerCase().includes('rate');
-
-    console.warn(`[FleetPulse] Gemini ${isRateLimit ? 'rate-limited (retry exhausted)' : 'error'}: ${message} — serving mock`);
-
-    const mock = getMockResponse(body);
-    // Cache mock too — prevents a flood of retries under sustained quota pressure
-    setCached(key, mock, 'mock-fallback');
-
-    return NextResponse.json(
-      { ...mock, isLiveInference: false, cached: false },
-      {
-        status: 200,
-        headers: {
-          'X-FleetPulse-Source': 'mock-fallback',
-          'X-FleetPulse-Error': isRateLimit ? 'rate-limited' : 'api-error',
-          'X-FleetPulse-Message': encodeURIComponent(message.slice(0, 120)),
-          'X-Cache': 'MISS',
-        },
-      }
-    );
   }
+
+  // If primary model failed due to 404 or other non-quota issues, try secondary fallback model
+  if (PRIMARY_MODEL !== FALLBACK_MODEL) {
+    try {
+      console.info(`[FleetPulse] Attempting secondary fallback model: ${FALLBACK_MODEL}`);
+      const { result, latencyMs, modelUsed } = await callGeminiModel(ai, FALLBACK_MODEL, body);
+      setCached(key, result, modelUsed);
+
+      return NextResponse.json(
+        { ...result, isLiveInference: true, cached: false },
+        {
+          status: 200,
+          headers: {
+            'X-FleetPulse-Source': modelUsed,
+            'X-Cache': 'MISS',
+            'X-Inference-Latency-Ms': String(latencyMs),
+          },
+        }
+      );
+    } catch (fallbackErr: unknown) {
+      const msg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      lastError = `${lastError} | Fallback: ${msg}`;
+      console.warn(`[FleetPulse] Fallback model (${FALLBACK_MODEL}) also failed: ${msg}`);
+    }
+  }
+
+  // ── 4. Graceful Degradation to Mock (Never cached) ────────────────────────
+  console.warn(`[FleetPulse] All live Gemini attempts failed. Serving mock fallback. Error: ${lastError}`);
+  const mock = getMockResponse(body);
+
+  return NextResponse.json(
+    { ...mock, isLiveInference: false, cached: false },
+    {
+      status: 200,
+      headers: {
+        'X-FleetPulse-Source': 'mock-fallback',
+        'X-FleetPulse-Error': isRateLimit ? 'rate-limited' : 'api-error',
+        'X-FleetPulse-Message': encodeURIComponent(lastError.slice(0, 200)),
+        'X-Cache': 'MISS',
+      },
+    }
+  );
 }
+
