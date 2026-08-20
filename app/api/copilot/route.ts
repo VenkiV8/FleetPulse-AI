@@ -80,7 +80,8 @@ const RESPONSE_SCHEMA = {
 // ── Active Gemini Production Models ───────────────────────────────────────
 // 'gemini-2.0-flash' is the primary fast production model.
 // 'gemini-1.5-flash' is the secondary fallback if the 2.0 endpoint is unavailable.
-const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const rawModel = process.env.GEMINI_MODEL;
+const PRIMARY_MODEL = (rawModel && rawModel !== 'gemini-2.5-flash') ? rawModel : 'gemini-2.0-flash';
 const FALLBACK_MODEL = 'gemini-1.5-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────
