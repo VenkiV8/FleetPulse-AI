@@ -77,12 +77,9 @@ const RESPONSE_SCHEMA = {
   required: ['risk_assessment', 'mitigation_options', 'driver_dispatch_memo', 'customer_status_advisory'],
 };
 
-// ── Active Gemini Production Models ───────────────────────────────────────
-// 'gemini-2.0-flash' is the primary fast production model.
-// 'gemini-1.5-flash' is the secondary fallback if the 2.0 endpoint is unavailable.
-const rawModel = process.env.GEMINI_MODEL;
-const PRIMARY_MODEL = (rawModel && rawModel !== 'gemini-2.5-flash') ? rawModel : 'gemini-2.0-flash';
-const FALLBACK_MODEL = 'gemini-1.5-flash';
+// ── Active Gemini Production Model ────────────────────────────────────────
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const FALLBACK_MODEL = 'gemini-3.6-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────
 function buildSystemPrompt(): string {
