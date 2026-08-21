@@ -23,6 +23,8 @@ import {
   Brain,
   Zap,
   Activity,
+  X,
+  Mail,
 } from 'lucide-react';
 import type { Consignment } from '@/lib/types';
 import type {
@@ -206,6 +208,7 @@ function StrategyCard({
   strategyId,
   isHovered = false,
   onHoverStrategy,
+  compact = false,
 }: {
   option: GeminiMitigationOption;
   isPrimary: boolean;
@@ -214,6 +217,7 @@ function StrategyCard({
   strategyId: 'OPT-1' | 'OPT-2';
   isHovered?: boolean;
   onHoverStrategy?: (id: 'OPT-1' | 'OPT-2' | null) => void;
+  compact?: boolean;
 }) {
   const [stepsOpen, setStepsOpen] = useState(false);
   const feasCfg = feasibilityConfig[option.feasibility];
@@ -302,66 +306,72 @@ function StrategyCard({
       </div>
 
       {/* Action Steps toggle */}
-      <button
-        type="button"
-        className="w-full flex items-center justify-between text-[10px] text-slate-500 hover:text-slate-300 transition-colors duration-150 py-1"
-        onClick={(e) => {
-          e.stopPropagation();
-          setStepsOpen(!stepsOpen);
-        }}
-        aria-expanded={stepsOpen}
-      >
-        <span className="flex items-center gap-1.5">
-          <ListChecks className="w-3 h-3" />
-          Action Steps ({option.action_steps.length})
-        </span>
-        {stepsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-      </button>
+      {!compact && (
+        <>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between text-[10px] text-slate-500 hover:text-slate-300 transition-colors duration-150 py-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              setStepsOpen(!stepsOpen);
+            }}
+            aria-expanded={stepsOpen}
+          >
+            <span className="flex items-center gap-1.5">
+              <ListChecks className="w-3 h-3" />
+              Action Steps ({option.action_steps.length})
+            </span>
+            {stepsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
 
-      {stepsOpen && (
-        <ol className="mt-2.5 space-y-1.5 slide-in mb-3">
-          {option.action_steps.map((step, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className={`text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5
-                ${isPrimary ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
-                {i + 1}
-              </span>
-              <p className="text-[10px] text-slate-400 leading-relaxed">{step}</p>
-            </li>
-          ))}
-        </ol>
+          {stepsOpen && (
+            <ol className="mt-2.5 space-y-1.5 slide-in mb-3">
+              {option.action_steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className={`text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5
+                    ${isPrimary ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400'}`}>
+                    {i + 1}
+                  </span>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">{step}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
       )}
 
       {/* One-Click Approval Workflow Button */}
-      <div className="mt-3 pt-2.5 border-t border-slate-800/80">
-        {isResolved ? (
-          <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-              <Check className="w-3.5 h-3.5" />
-              Dispatch Override Authorized
-            </span>
-            <span className="text-[9px] font-mono text-emerald-400/80">SMS Dispatched</span>
-          </div>
-        ) : (
-          <button
-            id={`approve-override-${option.rank}`}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onApproveOverride?.(option);
-            }}
-            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold
-                       transition-all duration-200 shadow-sm cursor-pointer
-                       ${isPrimary
-                         ? 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white shadow-blue-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01]'
-                         : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                       }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            Approve Dispatch Override
-          </button>
-        )}
-      </div>
+      {!compact && (
+        <div className="mt-3 pt-2.5 border-t border-slate-800/80">
+          {isResolved ? (
+            <div className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                <Check className="w-3.5 h-3.5" />
+                Dispatch Override Authorized
+              </span>
+              <span className="text-[9px] font-mono text-emerald-400/80">SMS Dispatched</span>
+            </div>
+          ) : (
+            <button
+              id={`approve-override-${option.rank}`}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onApproveOverride?.(option);
+              }}
+              className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold
+                         transition-all duration-200 shadow-sm cursor-pointer
+                         ${isPrimary
+                           ? 'bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white shadow-blue-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01]'
+                           : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                         }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              Approve Dispatch Override
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -378,7 +388,7 @@ const INPUT_PARAMS = [
 const COT_STEPS = [
   {
     label: 'Telemetry Analysis',
-    detail: 'Confirmed vehicle static at KM 342. Projected delay exceeds acceptable buffer by 6 hours.',
+    detail: 'Confirmed vehicle static at KM 342. Projected delay exceeds acceptable buffer by 6 hours.',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10 border-blue-500/25',
   },
@@ -396,96 +406,85 @@ const COT_STEPS = [
   },
 ] as const;
 
-function AIReasoningDrawer() {
-  const [open, setOpen] = useState(false);
-
+// ── XAI Tab Content (always-expanded) ─────────────────────────────────────
+function XAITabContent() {
   return (
-    <div className="rounded-xl border border-violet-800/30 bg-slate-900/40 overflow-hidden">
-      {/* Toggle button */}
-      <button
-        id="ai-reasoning-drawer-toggle"
-        className="w-full flex items-center justify-between px-3.5 py-3 hover:bg-slate-800/40 transition-colors duration-150 group"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <div className="flex items-center gap-2.5">
+    <div className="space-y-4">
+      {/* Engine Metadata Strip */}
+      <div className="rounded-xl border border-violet-800/30 bg-violet-950/20 overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-slate-800/50">
           <div className="w-5 h-5 rounded-md bg-violet-500/15 border border-violet-500/25 flex items-center justify-center shrink-0">
             <Brain className="w-3 h-3 text-violet-400" />
           </div>
-          <span className="text-xs font-semibold text-slate-200 group-hover:text-slate-100 transition-colors">
-            Inspect AI Decision Logic & Telematics Payload
-          </span>
-          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/25 text-violet-400 font-mono">
+          <span className="text-xs font-semibold text-slate-200">Gemini Model Metadata</span>
+          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/25 text-violet-400 font-mono ml-auto">
             <Zap className="w-2.5 h-2.5" />
             XAI
           </span>
         </div>
-        {open
-          ? <ChevronUp className="w-3.5 h-3.5 text-slate-600" />
-          : <ChevronDown className="w-3.5 h-3.5 text-slate-600" />}
-      </button>
-
-      {open && (
-        <div className="border-t border-slate-800/60 slide-in">
-
-          {/* Engine Metadata Strip */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 bg-violet-950/20 border-b border-slate-800/50">
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-violet-400 shrink-0" />
-              <span className="text-[9px] font-bold text-violet-300 uppercase tracking-widest">Engine</span>
-            </div>
-            {([
-              { label: 'Model',             value: 'Gemini 3.6 Flash' },
-              { label: 'Temperature',       value: '0.2' },
-              { label: 'Latency',           value: '840 ms' },
-              { label: 'Risk Confidence',   value: '92%' },
-            ] as const).map((meta) => (
-              <div key={meta.label} className="flex items-center gap-1">
-                <span className="text-[9px] text-slate-600">{meta.label}:</span>
-                <span className="text-[9px] font-mono font-semibold text-slate-300">{meta.value}</span>
-              </div>
-            ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <Activity className="w-3 h-3 text-violet-400 shrink-0" />
+            <span className="text-[9px] font-bold text-violet-300 uppercase tracking-widest">Engine</span>
           </div>
+          {([
+            { label: 'Model',           value: 'Gemini 2.0 Flash' },
+            { label: 'Temperature',     value: '0.2' },
+            { label: 'Latency',         value: '840 ms' },
+            { label: 'Risk Confidence', value: '92%' },
+          ] as const).map((meta) => (
+            <div key={meta.label} className="flex items-center gap-1">
+              <span className="text-[9px] text-slate-600">{meta.label}:</span>
+              <span className="text-[9px] font-mono font-semibold text-slate-300">{meta.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Input Parameters Matrix */}
-          <div className="px-3.5 pt-3 pb-2.5">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-semibold mb-2">Input Parameters</p>
-            <div className="space-y-1.5">
-              {INPUT_PARAMS.map((p) => (
-                <div key={p.key} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 py-1.5 px-2.5 rounded-lg bg-slate-800/40 border border-slate-700/30">
-                  <span className="text-[9px] text-slate-500 font-mono leading-relaxed whitespace-nowrap">{p.key}</span>
-                  <span className="text-[9px] text-slate-300 font-mono leading-relaxed break-words">{p.value}</span>
+      {/* Input Parameters Matrix */}
+      <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-slate-800/50">
+          <Cpu className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-xs font-semibold text-slate-200">Raw Telematics Input Parameters</span>
+        </div>
+        <div className="px-3.5 pt-3 pb-2.5 space-y-1.5">
+          {INPUT_PARAMS.map((p) => (
+            <div key={p.key} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 py-1.5 px-2.5 rounded-lg bg-slate-800/40 border border-slate-700/30">
+              <span className="text-[9px] text-slate-500 font-mono leading-relaxed whitespace-nowrap">{p.key}</span>
+              <span className="text-[9px] text-slate-300 font-mono leading-relaxed break-words">{p.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chain-of-Thought Steps */}
+      <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-slate-800/50">
+          <Brain className="w-3.5 h-3.5 text-violet-400" />
+          <span className="text-xs font-semibold text-slate-200">Step-by-Step Chain-of-Thought</span>
+        </div>
+        <div className="px-3.5 pb-3.5 pt-3">
+          <div className="relative pl-4">
+            {/* Vertical connector line */}
+            <div className="absolute left-[7px] top-3 bottom-3 w-px bg-slate-700/50" />
+            <div className="space-y-3">
+              {COT_STEPS.map((step, i) => (
+                <div key={step.label} className="flex gap-3">
+                  {/* Step number node */}
+                  <div className={`relative z-10 flex items-center justify-center w-5 h-5 rounded-full border shrink-0 text-[9px] font-bold ${step.bg} ${step.color}`}>
+                    {i + 1}
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pb-0.5">
+                    <p className={`text-[10px] font-semibold mb-0.5 ${step.color}`}>{step.label}</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">{step.detail}</p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Chain-of-Thought Steps */}
-          <div className="px-3.5 pb-3.5">
-            <p className="text-[9px] text-slate-600 uppercase tracking-widest font-semibold mb-2.5">Chain-of-Thought Reasoning</p>
-            <div className="relative pl-4">
-              {/* Vertical connector line */}
-              <div className="absolute left-[7px] top-3 bottom-3 w-px bg-slate-700/50" />
-
-              <div className="space-y-3">
-                {COT_STEPS.map((step, i) => (
-                  <div key={step.label} className="flex gap-3">
-                    {/* Step number node */}
-                    <div className={`relative z-10 flex items-center justify-center w-5 h-5 rounded-full border shrink-0 text-[9px] font-bold ${step.bg} ${step.color}`}>
-                      {i + 1}
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pb-0.5">
-                      <p className={`text-[10px] font-semibold mb-0.5 ${step.color}`}>{step.label}</p>
-                      <p className="text-[10px] text-slate-400 leading-relaxed">{step.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -606,8 +605,8 @@ function CostBenefitTable() {
   );
 }
 
-function ExpenseBreakdownDrawer() {
-  const [open, setOpen] = useState(false);
+function ExpenseBreakdownDrawer({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const totalCost = EXPENSE_ITEMS.filter((i) => !i.isGain).reduce((s, i) => s + i.amount, 0);
   const roiMultiple = 17.1;
 
@@ -666,6 +665,141 @@ function ExpenseBreakdownDrawer() {
   );
 }
 
+// ── Outbound Comms Modal ──────────────────────────────────────────────────
+function CommsModal({
+  isOpen,
+  onClose,
+  driverMemo,
+  customerAdvisory,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  driverMemo: string;
+  customerAdvisory: string;
+}) {
+  const smsCharCount = customerAdvisory.length;
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Outbound Communications Preview"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/60 slide-in overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
+              <Mail className="w-3.5 h-3.5 text-indigo-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-100">Outbound Comms Preview</h2>
+              <p className="text-[10px] text-slate-500">Auto-generated by FleetPulse AI · Ready to dispatch</p>
+            </div>
+          </div>
+          <button
+            id="comms-modal-close-btn"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-colors duration-150"
+            aria-label="Close comms modal"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+          {/* ── Driver Dispatch Memo ── */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-xs font-semibold text-slate-200">Driver Dispatch Memo</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-500 font-mono">AUTO-GENERATED</span>
+              </div>
+              <CopyButton text={driverMemo} />
+            </div>
+            <pre className="text-[10px] text-slate-300 font-mono leading-relaxed whitespace-pre-wrap break-words bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/60 flex-1">
+              {driverMemo}
+            </pre>
+          </div>
+
+          {/* ── Customer Advisory SMS ── */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold text-slate-200">Customer Advisory SMS</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-500 font-mono">{smsCharCount}/160</span>
+              </div>
+              <CopyButton text={customerAdvisory} />
+            </div>
+
+            {/* Phone frame */}
+            <div className="bg-slate-950/60 rounded-xl border border-slate-800/60 p-3.5 flex-1">
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[9px] text-slate-500 font-mono">FleetPulse AI · SMS Preview</span>
+              </div>
+              <p className="text-[11px] text-slate-200 leading-relaxed font-mono">
+                {customerAdvisory}
+              </p>
+              {/* Char count bar */}
+              <div className="mt-3">
+                <div className="h-0.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      smsCharCount > 140 ? 'bg-amber-400' : smsCharCount === 160 ? 'bg-red-400' : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${Math.min((smsCharCount / 160) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-slate-600">0</span>
+                  <span className={`text-[9px] ${smsCharCount > 140 ? 'text-amber-400' : 'text-slate-600'}`}>
+                    {smsCharCount}/160 chars
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-800/70 bg-slate-900/60">
+          <span className="text-[10px] text-slate-500">Dispatched upon override approval</span>
+          <button
+            id="comms-modal-done-btn"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors duration-150"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function GeminiLoadingSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
@@ -697,6 +831,9 @@ function GeminiError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+// ── Tab types ─────────────────────────────────────────────────────────────
+export type GeminiTab = 'dispatch' | 'financial' | 'xai';
+
 // ── Main GeminiAnalysis Component ─────────────────────────────────────────
 interface GeminiAnalysisProps {
   consignment: Consignment;
@@ -706,6 +843,8 @@ interface GeminiAnalysisProps {
   onApproveOverride?: (option: GeminiMitigationOption) => void;
   hoveredStrategyId?: 'OPT-1' | 'OPT-2' | null;
   onHoverStrategy?: (id: 'OPT-1' | 'OPT-2' | null) => void;
+  activeTab?: GeminiTab;
+  onOpenComms?: () => void;
 }
 
 export default function GeminiAnalysis({
@@ -716,6 +855,8 @@ export default function GeminiAnalysis({
   onApproveOverride,
   hoveredStrategyId = null,
   onHoverStrategy,
+  activeTab = 'dispatch',
+  onOpenComms,
 }: GeminiAnalysisProps) {
   const [result, setResult] = useState<GeminiAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -723,6 +864,7 @@ export default function GeminiAnalysis({
   const [source, setSource] = useState<string | null>(null);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
+  const [commsOpen, setCommsOpen] = useState(false);
 
   const fetchAnalysis = useCallback(async () => {
     setLoading(true);
@@ -786,7 +928,12 @@ export default function GeminiAnalysis({
     fetchAnalysis();
   }, [fetchAnalysis]);
 
-  const smsCharCount = result?.customer_status_advisory.length ?? 0;
+  // Handler that opens comms and calls parent approve
+  const handleApproveWithComms = useCallback((option: GeminiMitigationOption) => {
+    onApproveOverride?.(option);
+    setCommsOpen(true);
+    onOpenComms?.();
+  }, [onApproveOverride, onOpenComms]);
 
   return (
     <div className="space-y-4">
@@ -824,7 +971,6 @@ export default function GeminiAnalysis({
         )}
       </div>
 
-
       {/* ── Loading ── */}
       {loading && (
         <div className="space-y-3">
@@ -839,122 +985,128 @@ export default function GeminiAnalysis({
       {/* ── Error ── */}
       {!loading && error && <GeminiError onRetry={fetchAnalysis} />}
 
-      {/* ── Result ── */}
+      {/* ── Tab Content ── */}
       {!loading && result && (
-        <div className="space-y-3.5">
+        <>
+          {/* ── DISPATCH TAB ── */}
+          {activeTab === 'dispatch' && (
+            <div className="space-y-3.5">
+              {/* Risk Gauge */}
+              <RiskGauge
+                probability={result.risk_assessment.breach_probability}
+                severity={result.risk_assessment.severity}
+                timeToBreachHours={result.risk_assessment.time_to_breach_hours}
+                financialExposureInr={result.risk_assessment.financial_exposure_inr}
+              />
 
-          {/* ── Breach Risk Gauge ── */}
-          <RiskGauge
-            probability={result.risk_assessment.breach_probability}
-            severity={result.risk_assessment.severity}
-            timeToBreachHours={result.risk_assessment.time_to_breach_hours}
-            financialExposureInr={result.risk_assessment.financial_exposure_inr}
-          />
-
-          {/* ── AI Summary ── */}
-          <div className="px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles className="w-3 h-3 text-blue-400" />
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Assessment</span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              {isResolved
-                ? result.risk_assessment.summary.replace(/breach|critical|risk|blocked|stranded|halting|placing/gi, (w) => w)
-                : result.risk_assessment.summary}
-            </p>
-          </div>
-
-          {/* ── Strategy Cards ── */}
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">
-              Mitigation Strategies
-            </p>
-            <div className="space-y-2.5">
-              {result.mitigation_options.map((opt) => {
-                const stratId = opt.rank === 1 ? 'OPT-1' : 'OPT-2';
-                return (
-                  <StrategyCard
-                    key={opt.rank}
-                    option={opt}
-                    strategyId={stratId}
-                    isHovered={hoveredStrategyId === stratId}
-                    onHoverStrategy={onHoverStrategy}
-                    isPrimary={opt.rank === 1}
-                    isResolved={isResolved}
-                    onApproveOverride={onApproveOverride}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── AI Decision Logic & Telematics Drawer ── */}
-          <AIReasoningDrawer />
-
-          {/* ── CFO Trade-Off Table ── */}
-          <CostBenefitTable />
-
-          {/* ── Expense Breakdown Drawer ── */}
-          <ExpenseBreakdownDrawer />
-
-          {/* ── Driver Dispatch Memo ── */}
-          <CollapsibleDrawer
-            id="driver-dispatch-memo-drawer"
-            icon={<FileText className="w-3.5 h-3.5 text-cyan-400" />}
-            title="Driver Dispatch Memo"
-            badge="AUTO-GENERATED"
-          >
-            <div className="px-3.5 py-3">
-              <div className="flex justify-end mb-2">
-                <CopyButton text={result.driver_dispatch_memo} />
-              </div>
-              <pre className="text-[10px] text-slate-300 font-mono leading-relaxed whitespace-pre-wrap break-words bg-slate-950/60 rounded-lg p-3 border border-slate-800/60">
-                {result.driver_dispatch_memo}
-              </pre>
-            </div>
-          </CollapsibleDrawer>
-
-          {/* ── Customer Advisory SMS ── */}
-          <CollapsibleDrawer
-            id="customer-advisory-drawer"
-            icon={<MessageSquare className="w-3.5 h-3.5 text-purple-400" />}
-            title="Customer Advisory SMS"
-            badge={`${smsCharCount}/160`}
-          >
-            <div className="px-3.5 py-3">
-              <div className="flex justify-end mb-2">
-                <CopyButton text={result.customer_status_advisory} />
-              </div>
-              <div className="bg-slate-950/60 rounded-xl border border-slate-800/60 p-3.5">
-                {/* Phone frame style */}
-                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                  <span className="text-[9px] text-slate-500 font-mono">FleetPulse AI · SMS Preview</span>
+              {/* AI Summary */}
+              <div className="px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Assessment</span>
                 </div>
-                <p className="text-[11px] text-slate-200 leading-relaxed font-mono">
-                  {result.customer_status_advisory}
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {isResolved
+                    ? result.risk_assessment.summary.replace(/breach|critical|risk|blocked|stranded|halting|placing/gi, (w) => w)
+                    : result.risk_assessment.summary}
                 </p>
-                {/* Char count bar */}
-                <div className="mt-2.5">
-                  <div className="h-0.5 rounded-full bg-slate-800 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        smsCharCount > 140 ? 'bg-amber-400' : smsCharCount === 160 ? 'bg-red-400' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${Math.min((smsCharCount / 160) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[9px] text-slate-600">0</span>
-                    <span className={`text-[9px] ${smsCharCount > 140 ? 'text-amber-400' : 'text-slate-600'}`}>
-                      {smsCharCount}/160 chars
-                    </span>
-                  </div>
+              </div>
+
+              {/* Strategy Cards */}
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">
+                  Mitigation Strategies
+                </p>
+                <div className="space-y-2.5">
+                  {result.mitigation_options.map((opt, idx) => {
+                    const stratId = opt.rank === 1 ? 'OPT-1' : 'OPT-2';
+                    const isPrimary = opt.rank === 1;
+
+                    if (isPrimary) {
+                      // Strategy 1: full card
+                      return (
+                        <StrategyCard
+                          key={opt.rank}
+                          option={opt}
+                          strategyId={stratId}
+                          isHovered={hoveredStrategyId === stratId}
+                          onHoverStrategy={onHoverStrategy}
+                          isPrimary={true}
+                          isResolved={isResolved}
+                          onApproveOverride={handleApproveWithComms}
+                        />
+                      );
+                    } else {
+                      // Strategy 2: compact collapsible accordion
+                      return (
+                        <CollapsibleDrawer
+                          key={opt.rank}
+                          id="strategy-2-accordion"
+                          icon={
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 border border-slate-600/30">
+                              ALTERNATIVE
+                            </span>
+                          }
+                          title={`Strategy 2: ${opt.strategy.length > 32 ? opt.strategy.slice(0, 32) + '…' : opt.strategy}`}
+                          badge={`${formatInr(opt.net_savings_inr)} saved`}
+                        >
+                          <div className="p-3.5">
+                            <StrategyCard
+                              option={opt}
+                              strategyId={stratId}
+                              isHovered={hoveredStrategyId === stratId}
+                              onHoverStrategy={onHoverStrategy}
+                              isPrimary={false}
+                              isResolved={isResolved}
+                              onApproveOverride={handleApproveWithComms}
+                              compact={false}
+                            />
+                          </div>
+                        </CollapsibleDrawer>
+                      );
+                    }
+                  })}
                 </div>
               </div>
+
+              {/* View Outbound Comms Button */}
+              <button
+                id="view-outbound-comms-btn"
+                type="button"
+                onClick={() => setCommsOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium
+                           bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border border-slate-700/60
+                           hover:border-slate-600 transition-all duration-200"
+              >
+                <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                ✉ View Outbound Comms Preview
+              </button>
             </div>
-          </CollapsibleDrawer>
-        </div>
+          )}
+
+          {/* ── FINANCIAL TAB ── */}
+          {activeTab === 'financial' && (
+            <div className="space-y-3.5">
+              <CostBenefitTable />
+              <ExpenseBreakdownDrawer defaultOpen={true} />
+            </div>
+          )}
+
+          {/* ── XAI TAB ── */}
+          {activeTab === 'xai' && (
+            <XAITabContent />
+          )}
+        </>
+      )}
+
+      {/* ── Outbound Comms Modal ── */}
+      {result && (
+        <CommsModal
+          isOpen={commsOpen}
+          onClose={() => setCommsOpen(false)}
+          driverMemo={result.driver_dispatch_memo}
+          customerAdvisory={result.customer_status_advisory}
+        />
       )}
     </div>
   );

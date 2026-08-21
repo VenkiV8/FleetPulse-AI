@@ -168,7 +168,7 @@ export default function MapPanel({
 
       {/* ── Map Container Wrapped in Styled Card ── */}
       <div className="flex-1 min-h-0 p-3">
-        <div className="w-full h-72 lg:h-full min-h-[280px] bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden relative">
+        <div className="w-full h-[340px] lg:h-full min-h-[280px] bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden relative">
           <LeafletMap
             consignment={consignment}
             isResolved={isResolved}

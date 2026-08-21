@@ -14,10 +14,13 @@ import {
   ExternalLink,
   Loader2,
   Sparkles,
+  Rocket,
+  BarChart2,
+  Brain,
 } from 'lucide-react';
 import type { AIAnalysis, AIAction, AIRiskItem, Consignment } from '@/lib/types';
 import type { GeminiMitigationOption } from '@/lib/geminiTypes';
-import GeminiAnalysis from './GeminiAnalysis';
+import GeminiAnalysis, { type GeminiTab } from './GeminiAnalysis';
 
 // ── Severity config ───────────────────────────────────────────────────────
 const severityConfig = {
@@ -154,6 +157,13 @@ function SectionDivider({ label }: { label: string }) {
   );
 }
 
+// ── Tab definition ────────────────────────────────────────────────────────
+const TABS: { id: GeminiTab; label: string; icon: React.ReactNode; shortLabel: string }[] = [
+  { id: 'dispatch',  icon: <Rocket className="w-3 h-3" />,   label: 'Dispatch Action',    shortLabel: 'Dispatch' },
+  { id: 'financial', icon: <BarChart2 className="w-3 h-3" />, label: 'Financial Matrix',   shortLabel: 'Finance' },
+  { id: 'xai',       icon: <Brain className="w-3 h-3" />,    label: 'Explainability (XAI)', shortLabel: 'XAI' },
+];
+
 // ── Main AICopilot Component ──────────────────────────────────────────────
 interface AICopilotProps {
   analysis: AIAnalysis;
@@ -181,6 +191,7 @@ export default function AICopilot({
   const [actions, setActions] = useState<AIAction[]>(analysis.actions);
   const [riskItems] = useState<AIRiskItem[]>(analysis.riskItems);
   const [autonomousEnabled, setAutonomousEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState<GeminiTab>('dispatch');
 
   const handleApprove = (id: string) =>
     setActions((prev) => prev.map((a) => (a.id === id ? { ...a, approved: true } : a)));
@@ -213,6 +224,33 @@ export default function AICopilot({
         </div>
       </div>
 
+      {/* ── 3-Tab Switcher ── */}
+      <div className="shrink-0 flex items-center gap-0.5 px-3 pt-2.5 pb-0 border-b border-slate-800/60">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            id={`copilot-tab-${tab.id}`}
+            onClick={() => setActiveTab(tab.id)}
+            aria-selected={activeTab === tab.id}
+            role="tab"
+            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-t-lg text-[10px] font-semibold transition-all duration-150 whitespace-nowrap
+              ${activeTab === tab.id
+                ? 'text-blue-300 bg-blue-500/10 border border-b-0 border-blue-500/30'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 border border-transparent'
+              }`}
+          >
+            {tab.icon}
+            {/* Show short label on narrow panels */}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.shortLabel}</span>
+            {/* Active bottom bar */}
+            {activeTab === tab.id && (
+              <span className="absolute bottom-0 left-0 right-0 h-px bg-blue-400 rounded-t-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* ── Scrollable Content ── */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
 
@@ -229,7 +267,7 @@ export default function AICopilot({
           </div>
         )}
 
-        {/* ── GEMINI INTELLIGENCE SECTION ── */}
+        {/* ── GEMINI INTELLIGENCE SECTION (Tab-aware) ── */}
         <GeminiAnalysis
           key={consignment.id}
           consignment={consignment}
@@ -239,89 +277,95 @@ export default function AICopilot({
           onApproveOverride={onApproveOverride}
           hoveredStrategyId={hoveredStrategyId}
           onHoverStrategy={onHoverStrategy}
+          activeTab={activeTab}
         />
 
-        <SectionDivider label="Static Risk Intelligence" />
+        {/* ── Static Risk & Actions: only shown in Dispatch tab ── */}
+        {activeTab === 'dispatch' && (
+          <>
+            <SectionDivider label="Static Risk Intelligence" />
 
-        {/* ── Risk Analysis ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Risk Analysis</h3>
-            {highRiskCount > 0 && !isResolved && (
-              <span className="badge-critical px-2 py-0.5 rounded-md text-[10px] font-semibold">{highRiskCount} HIGH</span>
-            )}
-            {isResolved && <span className="text-[10px] text-green-400 font-medium">All Clear</span>}
-          </div>
-          <div className="space-y-2">
-            {riskItems.map((item, i) => (
-              <div key={i} className={isResolved ? 'opacity-40' : ''}>
-                <RiskCard item={item} />
+            {/* ── Risk Analysis ── */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Risk Analysis</h3>
+                {highRiskCount > 0 && !isResolved && (
+                  <span className="badge-critical px-2 py-0.5 rounded-md text-[10px] font-semibold">{highRiskCount} HIGH</span>
+                )}
+                {isResolved && <span className="text-[10px] text-green-400 font-medium">All Clear</span>}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Recommended Actions ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Recommended Actions</h3>
-            <span className={`text-[10px] font-medium ${allApproved ? 'text-green-400' : 'text-slate-600'}`}>
-              {approvedCount}/{actions.length} approved
-            </span>
-          </div>
-          <div className="space-y-2">
-            {actions.map((action) => (
-              <ActionCard key={action.id} action={action} onApprove={handleApprove} disabled={isAnalyzing} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Dispatch Overrides ── */}
-        <div>
-          <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Dispatch Overrides</h3>
-          <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4 text-center">
-            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center mx-auto mb-2
-              ${autonomousEnabled ? 'bg-blue-600/20 border-blue-500/40' : 'bg-slate-800 border-slate-700'}`}>
-              <Zap className={`w-4 h-4 ${autonomousEnabled ? 'text-blue-400' : 'text-slate-500'}`} />
+              <div className="space-y-2">
+                {riskItems.map((item, i) => (
+                  <div key={i} className={isResolved ? 'opacity-40' : ''}>
+                    <RiskCard item={item} />
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Autonomous override mode is{' '}
-              <span className={autonomousEnabled ? 'text-blue-400 font-medium' : 'text-amber-400'}>
-                {autonomousEnabled ? 'active' : 'standby'}
-              </span>.
-              {!autonomousEnabled && <><br />Approve actions above to activate.</>}
-            </p>
-            <button id="enable-autonomous-mode-btn"
-              onClick={() => setAutonomousEnabled((v) => !v)}
-              disabled={!allApproved && !autonomousEnabled}
-              className={`mt-3 px-4 py-2 rounded-lg text-xs font-medium border transition-all duration-200
-                ${autonomousEnabled
-                  ? 'bg-blue-600/20 border-blue-500/40 text-blue-300 hover:bg-blue-600/30'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
-                }`}>
-              {autonomousEnabled ? 'Disable Autonomous Mode' : 'Enable Autonomous Mode'}
-            </button>
-          </div>
-        </div>
 
-        {/* ── AI Confidence ── */}
-        <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-3.5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider">AI Confidence</span>
-            <span className={`text-xs font-bold ${isResolved ? 'text-green-400' : 'text-emerald-400'}`}>
-              {isResolved ? '99.1%' : '94.2%'}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-700"
-              style={{ width: isResolved ? '99.1%' : '94.2%' }} />
-          </div>
-          <p className="text-[10px] text-slate-600 mt-2">
-            {isResolved
-              ? 'Post-resolution validation complete — corridor certified clear.'
-              : 'Based on 48h historical + live IMD/NHAI feed'}
-          </p>
-        </div>
+            {/* ── Recommended Actions ── */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Recommended Actions</h3>
+                <span className={`text-[10px] font-medium ${allApproved ? 'text-green-400' : 'text-slate-600'}`}>
+                  {approvedCount}/{actions.length} approved
+                </span>
+              </div>
+              <div className="space-y-2">
+                {actions.map((action) => (
+                  <ActionCard key={action.id} action={action} onApprove={handleApprove} disabled={isAnalyzing} />
+                ))}
+              </div>
+            </div>
+
+            {/* ── Dispatch Overrides ── */}
+            <div>
+              <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Dispatch Overrides</h3>
+              <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4 text-center">
+                <div className={`w-8 h-8 rounded-lg border flex items-center justify-center mx-auto mb-2
+                  ${autonomousEnabled ? 'bg-blue-600/20 border-blue-500/40' : 'bg-slate-800 border-slate-700'}`}>
+                  <Zap className={`w-4 h-4 ${autonomousEnabled ? 'text-blue-400' : 'text-slate-500'}`} />
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Autonomous override mode is{' '}
+                  <span className={autonomousEnabled ? 'text-blue-400 font-medium' : 'text-amber-400'}>
+                    {autonomousEnabled ? 'active' : 'standby'}
+                  </span>.
+                  {!autonomousEnabled && <><br />Approve actions above to activate.</>}
+                </p>
+                <button id="enable-autonomous-mode-btn"
+                  onClick={() => setAutonomousEnabled((v) => !v)}
+                  disabled={!allApproved && !autonomousEnabled}
+                  className={`mt-3 px-4 py-2 rounded-lg text-xs font-medium border transition-all duration-200
+                    ${autonomousEnabled
+                      ? 'bg-blue-600/20 border-blue-500/40 text-blue-300 hover:bg-blue-600/30'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                    }`}>
+                  {autonomousEnabled ? 'Disable Autonomous Mode' : 'Enable Autonomous Mode'}
+                </button>
+              </div>
+            </div>
+
+            {/* ── AI Confidence ── */}
+            <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">AI Confidence</span>
+                <span className={`text-xs font-bold ${isResolved ? 'text-green-400' : 'text-emerald-400'}`}>
+                  {isResolved ? '99.1%' : '94.2%'}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-700"
+                  style={{ width: isResolved ? '99.1%' : '94.2%' }} />
+              </div>
+              <p className="text-[10px] text-slate-600 mt-2">
+                {isResolved
+                  ? 'Post-resolution validation complete — corridor certified clear.'
+                  : 'Based on 48h historical + live IMD/NHAI feed'}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );
